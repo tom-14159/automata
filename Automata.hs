@@ -1,6 +1,7 @@
 module Automata where
 
 import Data.Set
+import qualified Data.Set as S
 import qualified Data.Map as M
 import Data.String.Utils
 import System.Exit
@@ -47,7 +48,12 @@ reachable_states :: Ord (State t) =>
 	[t] ->		-- states to explore
 	Set t		-- reachable states
 reachable_states _ r [] = r
-reachable_states a r (h:t) = 
+reachable_states m@(DFA (s, a, d, i, f)) r (h:t) =
+	reachable_states m (r `union` reached) (t ++ toList(reached `difference` r))
+		where reached = S.map (d h) a
+
+reachable :: Ord (State t) => FSM t -> FSM  t
+reachable m@(DFA (s, a, d, i, f)) = DFA (r, a, d, i, f `intersection` r) where r = reachable_states m (singleton i) [i]
 
 product_set :: (Ord a, Ord b) => Set a -> Set b -> Set (a,b)
 product_set a b = fromList $ [(x,y) | x<-(toList a), y<-(toList b)]
@@ -65,11 +71,12 @@ product (DFA (s1, a1, d1, i1, f1)) (DFA (s2, a2, d2, i2, f2)) f =
 	else error "Product of Automata over different alphabets!"
 
 (&&&) :: (Ord (State s), Ord (State t)) => FSM s -> FSM t -> FSM (s,t)
-(&&&) (DFA a) (DFA b) = Automata.product (DFA a) (DFA b) product_set
+(&&&) (DFA a) (DFA b) =
+	reachable (Automata.product (DFA a) (DFA b) product_set)
 
 (|||) :: (Ord (State s), Ord (State t)) => FSM s -> FSM t -> FSM (s,t)
 (|||) m1@(DFA (s1, a1, d1, i1, f1)) m2@(DFA (s2, a2, d2, i2, f2)) =
-	Automata.product m1 m2 (\st1 st2->product_set s1 st2 `union` product_set st1 s2)
+	reachable (Automata.product m1 m2 (\st1 st2->product_set s1 st2 `union` product_set st1 s2))
 
 ssw_delta :: Set String -> String -> Char -> String
 ssw_delta st s a = if (s++[a]) `member` st then s++[a] else s
