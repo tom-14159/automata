@@ -13,7 +13,7 @@ word = do { h <- ab_letter; t <- many ab_letter; return (h:t) }
 
 expr :: Parser LangTerm
 expr = term `chainl1` conj_disj
-term = do { w<-word; return (Constant w) } +++ do { symb "-"; n<-expr; return n } +++ do { symb "("; n <- expr; symb ")"; return n }
+term = do { w<-word; return (Constant w) } +++ do { symb "-"; n<-expr; return (Complement n) } +++ do { symb "("; n <- expr; symb ")"; return n }
 conj_disj = do { symb "&"; return Conjunction } +++ do { symb "|"; return Disjunction }
 
 eval_expr :: LangTerm -> FSM Int
