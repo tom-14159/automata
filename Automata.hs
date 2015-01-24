@@ -78,6 +78,14 @@ product (DFA (s1, a1, d1, i1, f1)) (DFA (s2, a2, d2, i2, f2)) f =
 (|||) m1@(DFA (s1, a1, d1, i1, f1)) m2@(DFA (s2, a2, d2, i2, f2)) =
 	reachable (Automata.product m1 m2 (\st1 st2->product_set s1 st2 `union` product_set st1 s2))
 
+elem_index :: Eq a => a -> [a] -> Int
+elem_index x (h:t) = if x==h then 1 else 1 + elem_index x t
+
+int_states :: (Ord (State s)) => FSM s -> FSM Int
+int_states (DFA (s, a, d, i, f)) =
+	DFA (fromList [1..size s], a, (\st al->get_index $ d (list_state!!(st-1)) al), get_index i, S.map get_index f)
+		where list_state = toList s; get_index = flip elem_index list_state
+
 ssw_delta :: Set String -> String -> Char -> String
 ssw_delta st s a = if (s++[a]) `member` st then s++[a] else s
 
