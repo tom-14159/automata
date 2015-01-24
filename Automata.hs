@@ -41,6 +41,14 @@ co (DFA (s, a, d, i, f)) = DFA (s, a, d, i, s `difference` f)
 empty_lang :: Alpha -> FSM Int
 empty_lang a = DFA (singleton 0, a, const, 0, empty)
 
+reachable_states :: Ord (State t) =>
+	FSM t ->	-- automaton
+	Set t ->	-- reached states
+	[t] ->		-- states to explore
+	Set t		-- reachable states
+reachable_states _ r [] = r
+reachable_states a r (h:t) = 
+
 product_set :: (Ord a, Ord b) => Set a -> Set b -> Set (a,b)
 product_set a b = fromList $ [(x,y) | x<-(toList a), y<-(toList b)]
 
