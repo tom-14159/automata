@@ -1,10 +1,14 @@
 import ParseLib
 import Automata
+import Data.Set (Set)
+import qualified Data.Set as S
 import Data.String.Utils
 import System.Environment
-import qualified Data.Set as Set
 import System.Console.Readline
 import System.Exit
+import System.IO.Temp
+import System.Cmd
+import System.Directory
 
 data LangTerm = Minimize LangTerm | Constant String | Complement LangTerm | Conjunction LangTerm LangTerm | Disjunction LangTerm LangTerm deriving (Eq, Show)
 
@@ -35,7 +39,7 @@ parse_term s =
 -- Evaluation
 eval_expr :: LangTerm -> FSM Int
 
-eval_expr (Constant s) = int_states $ ssw s (Set.fromList "ab")
+eval_expr (Constant s) = int_states $ ssw s (S.fromList "ab")
 eval_expr (Complement a) = co (eval_expr a)
 eval_expr (Minimize a) = int_states $ minimize (eval_expr a)
 eval_expr (Conjunction a b) = int_states $ (eval_expr a) &&& (eval_expr b)
@@ -45,6 +49,25 @@ eval_expr (Disjunction a b) = int_states $ (eval_expr a) ||| (eval_expr b)
 flush :: Maybe LangTerm -> IO ()
 flush Nothing = putStrLn "Parse error." >> exitWith (ExitFailure 1)
 flush (Just t) = (putStrLn.show) (eval_expr t) >> exitWith ExitSuccess
+
+viz' :: Show t => FSM t -> IO ()
+viz' m = withSystemTempDirectory "piecewise" (writeAndShow m) >> return ()
+
+writeAndShow :: Show t => FSM t -> String -> IO ()
+writeAndShow m path = do {
+	writeFile (path++".dot") (show m);
+	exitCode <- system ("dot -Tpdf "++path++".dot -o "++path++".pdf");
+	if exitCode == ExitSuccess
+	then do {
+		system ("evince "++path++".pdf");
+		return ();
+	} else do {
+		putStrLn "dot failed";
+	};
+
+	removeFile (path++".pdf");
+	removeFile (path++".dot");
+}
 
 cli :: IO ()
 cli = do {
@@ -56,7 +79,7 @@ cli = do {
 			addHistory s;
 			case parse_term s of {
 				Nothing -> do { putStrLn "Parse error"; cli };
-				Just x -> do { viz $ eval_expr x; cli }
+				Just x -> do { viz' $ eval_expr x; cli }
 			}
 		}
 	}
