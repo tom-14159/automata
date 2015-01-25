@@ -1,6 +1,7 @@
 module Automata where
 
-import Data.Set (Set, fromList, singleton, member, toList, size, union, difference, intersection, empty)
+import Data.List (find,findIndex)
+import Data.Set (Set, fromList, singleton, member, toList, size, union, difference, intersection, empty, fold, insert, findMin)
 import qualified Data.Set as S
 import qualified Data.Map as M
 import Data.String.Utils
@@ -57,6 +58,24 @@ reachable m@(DFA (s, a, d, i, f)) = DFA (r, a, d, i, f `intersection` r) where r
 
 product_set :: (Ord a, Ord b) => Set a -> Set b -> Set (a,b)
 product_set a b = fromList $ [(x,y) | x<-(toList a), y<-(toList b)]
+
+leads_to :: Ord t => FSM t -> State t -> Set (State t)
+leads_to m@(DFA (s, a, d, i, f)) st = S.map (d st) a
+
+new_classes :: Ord t => FSM t -> [Set (State t)] -> [(State t, (Int, Set Int))]
+new_classes m@(DFA (s, a, d, i, f)) partition = toList $ S.map (\st->(st, (get_index partition st,S.map (get_index partition) (leads_to m st)))) s
+	where get_index p e = case findIndex (member e) p of { Just x -> x }
+
+refine :: Ord t => FSM t -> [Set (State t)] -> [Set (State t)]
+refine m p = map (\k -> fromList (map fst (filter (\x->snd x == k) ns))) (toList (fromList (map snd ns))) where ns = new_classes m p
+
+refine_many :: Ord t => FSM t -> [Set (State t)] -> [Set (State t)]
+refine_many m p = if length p /= length r then refine_many m r else r where r = refine m p
+
+minimize :: Ord t => FSM t -> FSM (Set (State t))
+minimize m@(DFA (s, a, d, i, f)) = DFA (new_states, a, (\st al->get_class new_states (d (findMin st) al)), get_class new_states i, S.map (get_class new_states) f)
+	where get_class p i = fold (\x y -> if i `member` x then x else y) empty p;
+		new_states = fromList $ refine_many m [s `difference` f, f]
 
 product :: (Ord (State s), Ord (State t)) => FSM s -> FSM t -> (Set s -> Set t -> Set (s,t)) -> FSM (s,t)
 product (DFA (s1, a1, d1, i1, f1)) (DFA (s2, a2, d2, i2, f2)) f =
