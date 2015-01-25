@@ -59,11 +59,11 @@ reachable m@(DFA (s, a, d, i, f)) = DFA (r, a, d, i, f `intersection` r) where r
 product_set :: (Ord a, Ord b) => Set a -> Set b -> Set (a,b)
 product_set a b = fromList $ [(x,y) | x<-(toList a), y<-(toList b)]
 
-leads_to :: Ord t => FSM t -> State t -> Set (State t)
-leads_to m@(DFA (s, a, d, i, f)) st = S.map (d st) a
+leads_to :: Ord t => FSM t -> State t -> [State t]
+leads_to m@(DFA (s, a, d, i, f)) st = map (d st) (toList a)
 
-new_classes :: Ord t => FSM t -> [Set (State t)] -> [(State t, (Int, Set Int))]
-new_classes m@(DFA (s, a, d, i, f)) partition = toList $ S.map (\st->(st, (get_index partition st,S.map (get_index partition) (leads_to m st)))) s
+new_classes :: Ord t => FSM t -> [Set (State t)] -> [(State t, [Int])]
+new_classes m@(DFA (s, a, d, i, f)) partition = toList $ S.map (\st->(st, (get_index partition st : map (get_index partition) (leads_to m st)))) s
 	where get_index p e = case findIndex (member e) p of { Just x -> x }
 
 refine :: Ord t => FSM t -> [Set (State t)] -> [Set (State t)]
