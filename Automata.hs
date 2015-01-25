@@ -1,6 +1,6 @@
 module Automata where
 
-import Data.Set
+import Data.Set (Set, fromList, singleton, member, toList, size, union, difference, intersection, empty)
 import qualified Data.Set as S
 import qualified Data.Map as M
 import Data.String.Utils
@@ -17,7 +17,7 @@ escape :: String -> String
 escape s = "\"" ++ replace "\"" "\\\"" s ++ "\""
 
 gvtrans :: Show t => FSM t -> State t -> [String]
-gvtrans (DFA (s, al, d, i, f)) st = Prelude.map (\a->"\t" ++ (escape.show) st ++ " -> " ++ (escape.show) (d st a) ++ " [ label = \""++[a]++"\" ];" ) (toList al)
+gvtrans (DFA (s, al, d, i, f)) st = map (\a->"\t" ++ (escape.show) st ++ " -> " ++ (escape.show) (d st a) ++ " [ label = \""++[a]++"\" ];" ) (toList al)
 
 instance (Show t) => Show (FSM t) where
 	show dfa@(DFA (s, a, d, i, f)) = unlines $ [
@@ -25,9 +25,9 @@ instance (Show t) => Show (FSM t) where
 			"\trankdir=LR;",
 			"\tsize=\"8,5\";",
 			"\tnode [shape = doublecircle];",
-			"\t"++(join " " $ Prelude.map (escape.show) $ toList f)++(if size f > 0 then ";" else ""),
+			"\t"++(join " " $ map (escape.show) $ toList f)++(if size f > 0 then ";" else ""),
 			"\tnode [shape = circle];"
-		] ++ concat (Prelude.map (gvtrans dfa) (toList s)) ++ [
+		] ++ concat (map (gvtrans dfa) (toList s)) ++ [
 			"}"
 		]
 
@@ -43,9 +43,9 @@ empty_lang :: Alpha -> FSM Int
 empty_lang a = DFA (singleton 0, a, const, 0, empty)
 
 reachable_states :: Ord (State t) =>
-	FSM t ->	-- automaton
-	Set t ->	-- reached states
-	[t] ->		-- states to explore
+	FSM t	->	-- automaton
+	Set t	->	-- reached states
+	[t]	->	-- states to explore
 	Set t		-- reachable states
 reachable_states _ r [] = r
 reachable_states m@(DFA (s, a, d, i, f)) r (h:t) =
@@ -90,7 +90,7 @@ ssw_delta :: Set String -> String -> Char -> String
 ssw_delta st s a = if (s++[a]) `member` st then s++[a] else s
 
 ssw :: String -> Alpha -> FSM String
-ssw w al = DFA (states, al, ssw_delta states, "", singleton w) where states = fromList $ Prelude.map (flip take w) [0..length w]
+ssw w al = DFA (states, al, ssw_delta states, "", singleton w) where states = fromList $ map (flip take w) [0..length w]
 
 subword :: String -> FSM String
 subword s = ssw s (fromList "ab")
