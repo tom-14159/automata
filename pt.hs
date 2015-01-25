@@ -28,25 +28,34 @@ eval_expr (Minimize a) = int_states $ minimize (eval_expr a)
 eval_expr (Conjunction a b) = int_states $ (eval_expr a) &&& (eval_expr b)
 eval_expr (Disjunction a b) = int_states $ (eval_expr a) ||| (eval_expr b)
 
-main = do {
-	args <- getArgs;
-	if (concat args) == ""
-	then do {
-		x <- readline "> ";
-
-		addHistory $ is_just x;
-
-		if snd (par $ is_just x) /= ""
-		then print "Parse error\n"
-		else viz ((eval_expr.fst) (par $ is_just x));
-
-		main;
-		}
+parse_term :: String -> Maybe LangTerm
+parse_term s =
+	if (parse expr $ trim s) == []
+	then Nothing
 	else
-		if snd (par $ concat args) /= ""
-		then print "Parse error\n"
-		else viz ((eval_expr.fst) (par $ concat args));
-	} where trim = replace " " "";
-		par s = head $ parse expr (trim s);
-		is_just x = case x of { Just y -> y }
+		if (snd.head) (parse expr $ trim s) /= ""
+		then Nothing
+		else Just ((fst.head) (parse expr $ trim s))
+			where trim = replace " " ""
 
+flush :: Maybe LangTerm -> IO ()
+flush Nothing = putStrLn "Parse error."
+flush (Just t) = putStrLn $ show (eval_expr t)
+
+cli :: IO ()
+cli = do {
+	input <- readline "> ";
+	case input of {
+		Nothing -> putStrLn "bye";
+		Just "" -> putStrLn "bye";
+		Just s -> do {
+			addHistory s;
+			case parse_term s of {
+				Nothing -> do { putStrLn "Parse error"; cli };
+				Just x -> do { viz $ eval_expr x; cli }
+			}
+		}
+	}
+	}
+
+main = do { args <- getArgs; if concat args == "" then cli else flush (parse_term $ concat args); }
