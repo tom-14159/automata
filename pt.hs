@@ -4,6 +4,7 @@ import Data.String.Utils
 import System.Environment
 import qualified Data.Set as Set
 import System.Console.Readline
+import System.Exit
 
 data LangTerm = Minimize LangTerm | Constant String | Complement LangTerm | Conjunction LangTerm LangTerm | Disjunction LangTerm LangTerm deriving (Eq, Show)
 
@@ -39,8 +40,8 @@ parse_term s =
 			where trim = replace " " ""
 
 flush :: Maybe LangTerm -> IO ()
-flush Nothing = putStrLn "Parse error."
-flush (Just t) = putStrLn $ show (eval_expr t)
+flush Nothing = putStrLn "Parse error." >> exitWith (ExitFailure 1)
+flush (Just t) = (putStrLn.show) (eval_expr t) >> exitWith ExitSuccess
 
 cli :: IO ()
 cli = do {
@@ -58,4 +59,4 @@ cli = do {
 	}
 	}
 
-main = do { args <- getArgs; if concat args == "" then cli else flush (parse_term $ concat args); }
+main = do { args <- getArgs; if concat args == "" then cli >> exitWith ExitSuccess else flush (parse_term $ concat args); }
