@@ -21,7 +21,7 @@ ab_letter = sat (flip elem "ab")
 word = do { h <- ab_letter; t <- many ab_letter; return (h:t) }
 expr = term `chainl1` conj_disj
 term =	do { w<-word; return (Constant w) } +++
-	do { symb "-"; n<-expr; return (Complement n) } +++
+	do { symb "-"; n<-term; return (Complement n) } +++
 	do { symb "<"; n <- expr; symb ">"; return (Minimize n) } +++
 	do { symb "("; n <- expr; symb ")"; return n }
 conj_disj = do { symb "&"; return Conjunction } +++ do { symb "|"; return Disjunction }
