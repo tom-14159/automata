@@ -32,11 +32,6 @@ instance (Show t) => Show (FSM t) where
 			"}"
 		]
 
-viz :: Show t => FSM t -> IO ()
-viz fsm = writeFile "tmp.dot" (show fsm) >>
-	system "dot -Tpdf tmp.dot -o tmp.pdf" >>=
-	(\code -> if code == ExitSuccess then system "evince tmp.pdf" >> print "OK" else print "Fail")
-
 co :: Ord (State t) => FSM t -> FSM t
 co (DFA (s, a, d, i, f)) = DFA (s, a, d, i, s `difference` f)
 
@@ -49,9 +44,9 @@ reachable_states :: Ord (State t) =>
 	[t]	->	-- states to explore
 	Set t		-- reachable states
 reachable_states _ r [] = r
-reachable_states m@(DFA (s, a, d, i, f)) r (h:t) =
-	reachable_states m (r `union` reached) (t ++ toList(reached `difference` r))
-		where reached = S.map (d h) a
+reachable_states m@(DFA (s, a, d, i, f)) reached (h:t) =
+	reachable_states m (reached `union` new_found) (toList(new_found `difference` reached) ++ t)
+		where new_found = S.map (d h) a
 
 reachable :: Ord (State t) => FSM t -> FSM  t
 reachable m@(DFA (s, a, d, i, f)) = DFA (r, a, d, i, f `intersection` r) where r = reachable_states m (singleton i) [i]
