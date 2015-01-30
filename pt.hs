@@ -50,19 +50,19 @@ flush :: Maybe LangTerm -> IO ()
 flush Nothing = putStrLn "Parse error." >> exitWith (ExitFailure 1)
 flush (Just t) = (putStrLn.show) (eval_expr t) >> exitWith ExitSuccess
 
-viz' :: Show t => FSM t -> IO ()
-viz' m = withSystemTempDirectory "piecewise" (writeAndShow m) >> return ()
+viz' :: (Ord t, Show t) => String -> FSM t -> IO ()
+viz' driver m = withSystemTempDirectory "piecewise" (writeAndShow driver m) >> return ()
 
-writeAndShow :: Show t => FSM t -> String -> IO ()
-writeAndShow m path = do {
+writeAndShow :: (Ord t, Show t) => String -> FSM t -> String -> IO ()
+writeAndShow driver m path = do {
 	writeFile (path++".dot") (show m);
-	exitCode <- system ("dot -Tpdf "++path++".dot -o "++path++".pdf");
+	exitCode <- system (driver ++ " -Tpdf "++path++".dot -o "++path++".pdf");
 	if exitCode == ExitSuccess
 	then do {
 		system ("evince "++path++".pdf");
 		return ();
 	} else do {
-		putStrLn "dot failed";
+		putStrLn (driver ++ " failed");
 	};
 
 	removeFile (path++".pdf");
@@ -79,7 +79,7 @@ cli = do {
 			addHistory s;
 			case parse_term s of {
 				Nothing -> do { putStrLn "Parse error"; cli };
-				Just x -> do { viz' $ eval_expr x; cli }
+				Just x -> do { viz' "dot" $ eval_expr x; cli }
 			}
 		}
 	}
