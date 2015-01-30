@@ -18,11 +18,30 @@ data FSM t = DFA (Set (State t), Alpha, Delta t, State t, Set (State t))
 escape :: String -> String
 escape s = "\"" ++ replace "\"" "\\\"" s ++ "\""
 
-gvtrans :: Show t => FSM t -> State t -> [String]
-gvtrans (DFA (s, al, d, i, f)) st = map (\a->"\t" ++ (escape.show) st ++ " -> " ++ (escape.show) (d st a) ++ " [ label = \""++[a]++"\" ];" ) (toList al)
+add_comas :: [Char] -> String
+add_comas [] = []
+add_comas [a] = [a]
+add_comas (h:t) = h:',':add_comas t
+
+gvtrans :: (Ord t,Show t) => FSM t -> State t -> [String]
+gvtrans (DFA (s, al, d, i, f)) st =
+	map (\dest->"\t" ++ (escape.show) st ++ " -> " ++ (escape.show) dest ++ "[ label = \""++add_comas (map fst (filter (\x->snd x==dest) tuples))++"\" ];") (toList dests)
+		where tuples = map (\a -> (a, d st a)) (toList al);
+			dests = fromList $ map snd tuples
+
 gvtrans (BiDFA (s, al, d, g, i, f)) st =
-	map (\a->"\t" ++ (escape.show) st ++ " -> " ++ (escape.show) (d st a) ++ " [ label=\""++[a]++"\" color=\"blue\" ];" ) (toList al)
-	++ map (\a->"\t" ++ (escape.show) st ++ " -> " ++ (escape.show) (g st a) ++ " [ label=\""++[a]++"\" color=\"red\" ];" ) (toList al)
+	map (\(dest,list)->"\t" ++ (escape.show) st ++ " -> " ++ (escape.show) dest ++ "[ label = \""++add_comas list++"\" color=\"blue\"];") blues
+	++ map (\(dest,list)->"\t" ++ (escape.show) st ++ " -> " ++ (escape.show) dest ++ "[ label = \""++add_comas list++"\" color=\"red\"];") reds
+	++ map (\(dest,list)->"\t" ++ (escape.show) st ++ " -> " ++ (escape.show) dest ++ "[ label = \""++add_comas list++"\" color=\"blue:red\"];") joint
+		where d_tuples = S.map (\a -> (a, d st a)) al;
+			g_tuples = S.map (\a -> (a, g st a)) al;
+			blue_dests = S.map snd d_tuples;
+			red_dests = S.map snd g_tuples;
+			all_blues = S.map (\d->(d, toList $ S.map fst $ S.filter (\(c,dd)->d==dd) d_tuples)) blue_dests;
+			all_reds = S.map (\d->(d, toList $ S.map fst $ S.filter (\(c,dd)->d==dd) g_tuples)) red_dests;
+			joint = toList $ all_blues `intersection` all_reds;
+			blues = toList $ all_blues `difference` all_reds;
+			reds = toList $ all_reds `difference` all_blues
 
 get_states :: FSM t -> Set (State t)
 get_states (DFA (s, al, d, i, f)) = s
@@ -32,7 +51,7 @@ get_final_states :: Show t => FSM t -> Set (State t)
 get_final_states (DFA (s, al, d, i, f)) = f
 get_final_states (BiDFA (s, al, d, g, i, f)) = f
 
-instance (Show t) => Show (FSM t) where
+instance (Show t, Ord t) => Show (FSM t) where
 	show m = unlines $ [
 			"digraph finite_state_machine {",
 			"\trankdir=LR;",
@@ -48,7 +67,7 @@ dfa :: Ord (State t) => FSM t -> FSM t
 dfa m@(DFA (s, a, d, i, f)) = m
 dfa m@(BiDFA(s, a, d, g, i, f)) = DFA (s, a, d, i, f)
 
-bidfa :: Ord (State t) => FSM t -> FSM (t, Set t)
+bidfa :: (Ord t) => FSM t -> FSM (t, Set t)
 bidfa (DFA (s, a, d, i, f)) =
 	BiDFA(new_states, a, new_delta, new_gamma, (i,f), S.filter (uncurry S.member) new_states)
 		where new_delta = \(q,p) x -> (d q x, p);
