@@ -85,7 +85,7 @@ writeAndShow driver m path = do {
 
 cli :: Env -> IO ()
 cli env = do {
-	input <- readline "> ";
+	input <- readline (env_alpha env ++ "> ");
 	case input of {
 		Nothing -> putStrLn "bye";
 		Just "" -> putStrLn "bye";
