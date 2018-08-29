@@ -39,6 +39,7 @@ module ParseLib
     chainl, chainl1, char, digit, lower, upper, letter, alphanum,
     symb, ident, nat, int, token, parse, apply') where
 
+import qualified Control.Applicative as CA
 import Control.Monad
 import Data.Char
 
@@ -48,10 +49,21 @@ infixr 5 +++
 
 newtype Parser a = Parser (String -> [(a,String)])
 
+instance Functor Parser where
+    fmap = liftM
+
+instance Applicative Parser where
+    pure a = Parser (\cs -> [(a,cs)])
+    (<*>) = ap
+
 instance Monad Parser where
    return a      = Parser (\cs -> [(a,cs)])
    p >>= f       = Parser (\cs -> concat [parse (f a) cs' |
                                      (a,cs') <- parse p cs])
+
+instance CA.Alternative Parser where
+    (<|>) = mplus
+    empty = mzero
 
 instance MonadPlus Parser where
    p `mplus` q   = Parser (\cs -> parse p cs ++ parse q cs)
